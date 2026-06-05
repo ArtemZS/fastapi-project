@@ -22,10 +22,10 @@ services:
       - POSTGRES_PASSWORD=12345
       - POSTGRES_DB=ecommerce_db
 
-  nginx:
+nginx:
     build: nginx
     ports:
-      - 85:80
+      - 80:80  # for deploy
     depends_on:
       - web
 
