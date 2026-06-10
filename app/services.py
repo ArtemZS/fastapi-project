@@ -27,30 +27,6 @@ async def _recalculate_product_rating(product_id: int, db: AsyncSession) -> Deci
     return new_rating if new_rating is not None else Decimal("0.00")
 
 
-async def _get_active_category(
-    category_id: int,
-    db: AsyncSession,
-    status_code: int = status.HTTP_404_NOT_FOUND
-) -> CategoryModel:
-    """
-    Ищет активную категорию по ID. 
-    Возвращает объект категории или бросает ошибку.
-    """
-    category = await db.scalar(
-        select(CategoryModel).where(
-            CategoryModel.id == category_id, 
-            CategoryModel.is_active == True
-        )
-    )
-    
-    if category is None:
-        raise HTTPException(
-            status_code=status_code, 
-            detail="Category not found or inactive"
-        )
-        
-    return category
-
 async def _ensure_product_available(db: AsyncSession, product_id: int) -> None:
     """Проверяет, что товар существует в БД и активен."""
     product = await db.scalar(

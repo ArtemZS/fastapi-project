@@ -11,16 +11,23 @@ from app.schemas.categories import (
 ) 
 from app.schemas.paginations import PaginationDep
 from app.auth import RoleChecker
+from app.dependecies import get_valid_category
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services_for_routers.categories import CategoryService 
 
 # Создаём маршрутизатор с префиксом и тегом
 router = APIRouter(
     prefix="/categories",
-    tags=["categories"]
+    tags=["categories"],
+    deprecated=True
 )
 
+router_v2 = APIRouter(
+    prefix="/v2/categories",
+    tags=["v2/categories"]
+)
 
 @router.get("/", response_model=CategoryList, status_code=status.HTTP_200_OK)
 async def get_all_categories(
@@ -88,21 +95,13 @@ async def create_category(
     status_code=status.HTTP_200_OK
 )
 async def update_category(
-    category_id: int, 
-    category: CategoryCreate, 
+    category: CategoryCreate,
+    db_category: CategoryModel = Depends(get_valid_category),
     db: AsyncSession = Depends(get_async_db)
 ):
     """
     Обновляет категорию по её ID. Только администраторы могут обновлять категории.
     """
-    # Проверяем существование категории
-    db_category = await db.scalar(
-        select(CategoryModel).where(CategoryModel.id == category_id,
-                                    CategoryModel.is_active == True)
-        )
-    if not db_category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-
     # Проверяем parent_id, если указан
     if category.parent_id is not None:
         parent = await db.scalar(
@@ -112,7 +111,7 @@ async def update_category(
         #? Проверяем, что parent существует и не является ссылкой на себя
         if not parent:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent category not found")
-        if parent.id == category_id:
+        if parent.id == db_category.id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Category cannot be it's own parent")
 
     # Обновляем категорию
@@ -120,10 +119,11 @@ async def update_category(
     update_data = category.model_dump(exclude_unset=True)
     await db.execute(
         update(CategoryModel)
-        .where(CategoryModel.id == category_id)
+        .where(CategoryModel.id == db_category.id)
         .values(**update_data)
     )
     await db.commit()
+    await db.refresh(db_category)
     return db_category
 
 
@@ -159,3 +159,75 @@ async def delete_category(category_id: int, db: AsyncSession = Depends(get_async
             
     await db.commit()
     return db_category
+
+
+
+
+
+
+@router_v2.get("/", response_model=CategoryList, status_code=status.HTTP_200_OK)
+async def get_all_categories(
+    pagination: PaginationDep,                      
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Возвращает список всех активных категорий. 
+    """
+    return await CategoryService.get_all_categories(pagination, db) 
+
+
+@router_v2.get("/{category_id}", response_model=CategorySchema, status_code=status.HTTP_200_OK)
+async def get_category(
+    category: CategoryModel = Depends(get_valid_category)
+):
+    """
+    Возвращает активную категорию по ее ID. 
+    """
+    return await CategoryService.get_category(category)
+
+
+@router_v2.post("/",
+    response_model=CategorySchema,
+    dependencies=[Depends(RoleChecker("admin"))],
+    status_code=status.HTTP_201_CREATED
+)
+async def create_category(
+    category: CategoryCreate,
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Создаёт новую категорию. Только администраторы могут создавать категории.
+    """
+    return await CategoryService.create_category(category, db)
+
+
+@router_v2.put("/{category_id}",
+    response_model=CategorySchema,
+    dependencies=[Depends(RoleChecker("admin"))],
+    status_code=status.HTTP_200_OK
+)
+async def update_category(
+    category: CategoryCreate,
+    db_category: CategoryModel = Depends(get_valid_category),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Обновляет категорию по её ID. Только администраторы могут обновлять категории.
+    """
+    return await CategoryService.update_category(category, db_category, db)
+
+
+@router_v2.delete("/{category_id}",
+    response_model=CategorySchema,
+    dependencies=[Depends(RoleChecker("admin"))],
+    status_code=status.HTTP_200_OK
+)
+async def delete_category(
+    category_id: int,
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Выполняет мягкое удаление категории по её ID, устанавливая is_active = False.
+    Только администраторы могут удалять категории.
+    """
+    return await CategoryService.delete_category(category_id, db)

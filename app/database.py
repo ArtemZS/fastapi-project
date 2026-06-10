@@ -20,8 +20,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 # Строка подключения для PostgreSQl
 # Для прода
-DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@db:5432/ecommerce_db"
-#DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@localhost:5434/ecommerce_db"
+#DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@db:5432/ecommerce_db"
+DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@localhost:5434/ecommerce_db"
 
 # Создаём Engine
 async_engine = create_async_engine(DATABASE_URL, echo=False) #? echo=True для логирования SQL-запросов в консоль

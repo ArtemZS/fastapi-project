@@ -19,7 +19,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Путь должен указывать на эндпоинт, который выдаёт токены (обычно это /users/token)
 # Сюда прокидывается Request из которого достается токен из заголовка Authorization
-# Depends(RoleChecker("admin") -> Depends(get_current_user) - > Depends(oauth2_scheme)) 
+# Depends(RoleChecker("admin") <- Depends(get_current_user) <- Depends(oauth2_scheme)) 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/token")
 
 
@@ -108,6 +108,12 @@ async def get_current_user(
 
 
 class RoleChecker:
+    """
+    Зависимость для проверки роли пользователя. Принимает одну или несколько разрешённых ролей и проверяет, 
+    соответствует ли роль текущего пользователя одной из них. 
+    Если нет, выбрасывает исключение с кодом 403.
+    """
+    
     def __init__(self, allowed_roles: Union[str, list[str]]):
         # Можем принимать как одну роль "admin", так и список ["admin", "seller"]
         if isinstance(allowed_roles, str):

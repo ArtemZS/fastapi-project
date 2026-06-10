@@ -6,13 +6,16 @@ import uuid
 
 from app.models.products import Product as ProductModel
 from app.schemas.products import Product as ProductSchema, ProductCreate, ProductList
+from app.models import Category as CategoryModel
 from app.schemas.paginations import PaginationDep
 from app.auth import RoleChecker
 from app.models.users import User as UserModel
-from app.services import _get_active_category
+from app.dependecies import get_valid_category
 
 from app.db_depends import  get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.services_for_routers.products import ProductService
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -25,7 +28,13 @@ MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2 097 152 байт
 # Создаём маршрутизатор для товаров
 router = APIRouter(
     prefix="/products",
-    tags=["products"]
+    tags=["products"],
+    deprecated=True
+)
+
+router_v2 = APIRouter(
+    prefix="/v2/products",
+    tags=["v2/products"]
 )
 
 
@@ -157,7 +166,7 @@ async def create_product(
     Создаёт новый товар, привязанный к текущему продавцу (только для 'seller').
     """
     # Проверяем, существует ли активная категория
-    await _get_active_category(product.category_id, db, status_code=status.HTTP_400_BAD_REQUEST)
+    await get_valid_category(product.category_id, db, exc_code=status.HTTP_400_BAD_REQUEST)
     
     image_url = await save_product_image(image) if image else None
     # Создаём товар
@@ -174,14 +183,13 @@ async def create_product(
 
 @router.get("/category/{category_id}", response_model=ProductList, status_code=status.HTTP_200_OK)
 async def get_products_by_category(
-    category_id: int,
     pagination: PaginationDep,
+    category: CategoryModel = Depends(get_valid_category),
     db: AsyncSession = Depends(get_async_db)):
     """
     Возвращает список товаров в указанной категории по её ID.
     """
-    await _get_active_category(category_id, db, status_code=status.HTTP_404_NOT_FOUND)
-    filters = [ProductModel.category_id == category_id, ProductModel.is_active == True]
+    filters = [ProductModel.category_id == category.id, ProductModel.is_active == True]
     total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
     total = await db.scalar(total_stmt) or 0
     
@@ -209,7 +217,7 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
 
     # Проверяем, существует ли активная категория
-    await _get_active_category(product.category_id, db, status_code=status.HTTP_400_BAD_REQUEST)
+    await get_valid_category(product.category_id, db, exc_code=status.HTTP_400_BAD_REQUEST)
 
     return product
 
@@ -236,7 +244,7 @@ async def update_product(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="You can only update your own products")
     # Проверяем, существует ли активная категория
-    await _get_active_category(product.category_id, db, status_code=status.HTTP_400_BAD_REQUEST)
+    await get_valid_category(product.category_id, db, exc_code=status.HTTP_400_BAD_REQUEST)
 
     # Обновляем товар
     await db.execute(
@@ -280,3 +288,95 @@ async def delete_product(
     
     await db.commit()
     return product
+
+
+
+
+@router_v2.get("/", response_model=ProductList, status_code=status.HTTP_200_OK)
+async def get_all_products(
+    pagination: PaginationDep,
+    category_id: int | None = Query(None, description="ID категории для фильтрации"),
+    search: str | None = Query(None, min_length=1, description="Поиск по названию товара"),
+    min_price: Decimal | None = Query(None, ge=0, decimal_places=2, description="Минимальная цена товара"),
+    max_price: Decimal | None = Query(None, ge=0, decimal_places=2, description="Максимальная цена товара"),
+    in_stock: bool | None = Query(None, description="true — только товары в наличии, false — только без остатка"),
+    seller_id: int | None = Query(None, description="ID продавца для фильтрации"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Возвращает список всех товаров с поддержкой фильтров.
+    """
+    return await ProductService.get_all_products(
+        pagination,
+        category_id,
+        search,
+        min_price,
+        max_price,
+        in_stock,
+        seller_id,
+        db    
+    )
+
+
+@router_v2.post("/", response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
+async def create_product(
+    product: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(RoleChecker("seller"))
+):
+    """
+    Создаёт новый товар, привязанный к текущему продавцу (только для 'seller').
+    """
+    return await ProductService.create_product(product, image, db, current_user)
+
+
+@router_v2.get("/category/{category_id}", response_model=ProductList, status_code=status.HTTP_200_OK)
+async def get_products_by_category(
+    pagination: PaginationDep,
+    category: CategoryModel = Depends(get_valid_category),
+    db: AsyncSession = Depends(get_async_db)):
+    """
+    Возвращает список товаров в указанной категории по её ID.
+    """
+    return await ProductService.get_products_by_category(pagination, category, db)
+
+
+@router_v2.get("/{product_id}", response_model=ProductSchema, status_code=status.HTTP_200_OK)
+async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db)):
+    """
+    Возвращает детальную информацию о товаре по его ID.
+    """
+    return await ProductService.get_product(product_id, db)
+
+
+@router_v2.put("/{product_id}", response_model=ProductSchema, status_code=status.HTTP_200_OK)
+async def update_product(
+    product_id: int,
+    product: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(RoleChecker("seller"))
+):
+    """
+    Обновляет товар по его ID.
+    """
+    return await ProductService.update_product(
+        product_id,
+        product,
+        image,
+        db,
+        current_user
+    )
+    
+
+@router.delete("/{product_id}", response_model=ProductSchema, status_code=status.HTTP_200_OK)
+async def delete_product(
+    product_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(RoleChecker("seller"))
+):
+    """
+    Выполняет мягкое удаление товара, если он принадлежит текущему продавцу (только для 'seller').
+    """
+    return await ProductService.delete_product(product_id, db, current_user)
