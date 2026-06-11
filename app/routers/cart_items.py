@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Response
-from sqlalchemy import select, update, func, delete
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from decimal import Decimal
@@ -16,9 +16,16 @@ from app.schemas.cart_items import (
 )
 from app.services import _ensure_product_available, _get_cart_item
 
+from app.services_for_routers.cart_items import CarItemService
+
 router = APIRouter(
     prefix="/cart",
     tags=["cart"]
+)
+
+router_v2 = APIRouter(
+    prefix="/v2/cart",
+    tags=["v2/cart"]
 )
 
 
@@ -82,7 +89,7 @@ async def update_cart_item(
     product_id: int,
     payload: CartItemUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(get_current_user)
 ):
     """Обновляет количество товара в корзине."""
     await _ensure_product_available(db, product_id)
@@ -123,3 +130,49 @@ async def clear_cart(
     await db.execute(delete(CartItemModel).where(CartItemModel.user_id == current_user.id))
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+
+@router_v2.get("/", response_model=CartSchema, status_code=status.HTTP_200_OK)
+async def get_cart(
+    db: AsyncSession = Depends(get_async_db),
+    current_user:  UserModel = Depends(get_current_user)
+):
+    """Возвращает текущую корзину пользователя с деталями товаров, общим количеством и общей стоимостью."""
+    return await CarItemService.get_cart(db, current_user)
+
+@router_v2.post("/items", response_model=CartItemSchema, status_code=status.HTTP_201_CREATED)
+async def add_item_to_cart(
+    payload: CartItemCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Добавляет товар в корзину. Если товар уже есть, увеличивает количество."""
+    return await CarItemService.add_item_to_cart(payload, db, current_user)
+
+@router_v2.put("/items/{product_id}", response_model=CartItemSchema)
+async def update_cart_item(
+    product_id: int,
+    payload: CartItemUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Обновляет количество товара в корзине."""
+    return await CarItemService.update_cart_item(product_id, payload, db, current_user)
+
+@router_v2.delete("/items/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_item_from_cart(
+    product_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Удаляет товар из корзины."""
+    return await CarItemService.remove_item_from_cart(product_id, db, current_user)
+
+@router_v2.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_cart(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Очищает всю корзину пользователя."""
+    return await CarItemService.clear_cart(db, current_user)
