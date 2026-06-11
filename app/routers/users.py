@@ -8,11 +8,16 @@ from app.models.users import User as UserModel
 from app.schemas.users import User as UserSchema, UserCreate
 from app.auth import hash_password, verify_password, create_access_token, create_refresh_token, validate_token, CredentialsException
 from app.schemas.auth import TokenResponse, RefreshTokenRequest, RefreshTokenResponse
-
+from app.services_for_routers.auth import AuthService
 
 router = APIRouter(
     prefix="/users",
     tags=["users"]
+)
+
+router_v2 = APIRouter(
+    prefix="/v2/users",
+    tags=["v2/users"]
 )
 
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
@@ -40,7 +45,7 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_async_db)
     return db_user
 
 #? используем POST
-@router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+@router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK, deprecated=True)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)):
     """
     Аутентифицирует пользователя и возвращает access_token и refresh_token.
@@ -64,7 +69,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 
 
 #! реализовать ротацию рефреш-токенов в будущем, сейчас просто выдаём новый access_token по валидному refresh_token
-@router.post("/refresh-token", response_model=RefreshTokenResponse, status_code=status.HTTP_200_OK)
+@router.post("/refresh-token", response_model=RefreshTokenResponse, status_code=status.HTTP_200_OK, deprecated=True)
 async def refresh_token(payload: RefreshTokenRequest, db: AsyncSession = Depends(get_async_db)):
     """
     Обновляет access_token с помощью refresh_token.
@@ -84,3 +89,18 @@ async def refresh_token(payload: RefreshTokenRequest, db: AsyncSession = Depends
         access_token=access_token,
         token_type="bearer"
     )
+    
+    
+@router_v2.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)):
+    """
+    Аутентифицирует пользователя и возвращает access_token и refresh_token.
+    """   
+    return await AuthService.login(form_data, db)
+
+@router_v2.post("/refresh-token", response_model=RefreshTokenResponse, status_code=status.HTTP_200_OK)
+async def refresh_token(payload: RefreshTokenRequest, db: AsyncSession = Depends(get_async_db)):
+    """
+    Обновляет access_token с помощью refresh_token.
+    """
+    return await AuthService.refresh_token(payload, db)
