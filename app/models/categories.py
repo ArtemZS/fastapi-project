@@ -28,7 +28,6 @@ class Category(Base):
         #? remote_side показывает, что это родительская сторона связи, а не дочерняя
         remote_side="Category.id" #? или remote_side=[id]
     )
-    
     children: Mapped[list["Category"]] = relationship(
         # "Category", #? можно не писать, так как Mapped
         back_populates="parent"

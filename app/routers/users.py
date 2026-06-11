@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.db_depends import get_async_db
 from app.models.users import User as UserModel
 from app.schemas.users import User as UserSchema, UserCreate
-from app.auth import hash_password, verify_password, create_access_token, create_refresh_token, validate_token, CredentialsException
+from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, validate_token, CredentialsException
 from app.schemas.auth import TokenResponse, RefreshTokenRequest, RefreshTokenResponse
 from app.services_for_routers.auth import AuthService
 from app.services_for_routers.users import UserService

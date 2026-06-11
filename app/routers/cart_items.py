@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from decimal import Decimal
 
-from app.auth import get_current_user
+from app.core.security import get_current_user
 from app.db_depends import get_async_db
 from app.models.cart_items import CartItem as CartItemModel
 from app.models.users import User as UserModel

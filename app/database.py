@@ -17,11 +17,12 @@ SessionLocal = sessionmaker(bind=engine)
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from app.core.config import settings
 
 # Строка подключения для PostgreSQl
 # Для прода
 #DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@db:5432/ecommerce_db"
-DATABASE_URL = "postgresql+asyncpg://ecommerce_user:12345@localhost:5434/ecommerce_db"
+DATABASE_URL = f"postgresql+asyncpg://{settings.db_username}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
 
 # Создаём Engine
 async_engine = create_async_engine(DATABASE_URL, echo=False) #? echo=True для логирования SQL-запросов в консоль

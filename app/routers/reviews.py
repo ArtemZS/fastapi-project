@@ -9,7 +9,7 @@ from app.schemas.reviews import Review as ReviewSchema, ReviewCreate, ReviewList
 from app.schemas.paginations import PaginationDep
 from app.models.users import User as UserModel
 from app.models.products import Product as ProductModel
-from app.auth import RoleChecker
+from app.core.security import RoleChecker
 from app.services import _recalculate_product_rating
 from app.services_for_routers.reviews import ReviewService
 

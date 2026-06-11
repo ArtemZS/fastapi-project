@@ -17,7 +17,14 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     role: Mapped[str] = mapped_column(String, default="buyer") #? "buyer" or "seller" or "admin"
     
+    # Связь с табллицей Products, если пользователь - продавец 
     products: Mapped[list["Product"]] = relationship(back_populates="seller")
+    
+    # Связь с таблицей Reviews, если пользователь - покупатель
     reviews: Mapped[list["Review"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    
+    # Связь с таблицей CartItems, если пользователь - покупатель
     cart_items: Mapped[list["CartItem"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    
+    # Связь с таблицей Orders, если пользователь - покупатель
     orders: Mapped[list["Order"]] = relationship(back_populates="user", cascade="all, delete-orphan")

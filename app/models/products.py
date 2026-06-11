@@ -44,6 +44,9 @@ class Product(Base):
     category: Mapped["Category"] = relationship(back_populates="products" )
     #? Связь с user многие-к-одному
     seller: Mapped["User"] = relationship(back_populates="products")
+    #? Связь с таблицей Reviews один-ко-многим
     reviews: Mapped[list["Review"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    #? Связь с таблицей CartItems один-ко-многим
     cart_items: Mapped[list["CartItem"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    #? Связь с таблицей OrderItems один-ко-многим
     order_items: Mapped[list["OrderItem"]] = relationship(back_populates="product")

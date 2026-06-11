@@ -10,7 +10,7 @@ from app.schemas.categories import (
     CategoryList
 ) 
 from app.schemas.paginations import PaginationDep
-from app.auth import RoleChecker
+from app.core.security import RoleChecker
 from app.dependecies import get_valid_category
 
 from sqlalchemy.ext.asyncio import AsyncSession

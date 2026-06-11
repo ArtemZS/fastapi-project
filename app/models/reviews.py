@@ -20,7 +20,10 @@ class Review(Base):
     comment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     
+    # Связь с таблицей Products один-ко-многим
     product: Mapped["Product"] = relationship(back_populates="reviews")
+    
+    # Связь с таблицей Users один-ко-многим
     user: Mapped["User"] = relationship(back_populates="reviews")
 
     

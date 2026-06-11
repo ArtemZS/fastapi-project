@@ -21,7 +21,10 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),  nullable=(False)
     )
+    # Связь с таблицей Users один-ко-многим
     user: Mapped["User"] = relationship(back_populates="orders")
+    
+    # Связь с таблицей OrderItems один-ко-многим
     items: Mapped[list["OrderItem"]] = relationship(
         back_populates="order",
         cascade="all, delete-orphan")
@@ -41,5 +44,7 @@ class OrderItem(Base):
     unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     total_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
+    # Связь с таблицей Orders многие-к-одному
     order: Mapped["Order"] = relationship(back_populates="items")
+    # Связь с таблицей Products многие-к-одному
     product: Mapped["Product"] = relationship(back_populates="order_items")

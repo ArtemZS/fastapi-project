@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.users import User as UserModel
 from app.schemas.users import UserCreate
-from app.auth import hash_password
+from app.core.security import hash_password
 from fastapi import HTTPException, status
 
 class UserService:

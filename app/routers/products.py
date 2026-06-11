@@ -8,7 +8,7 @@ from app.models.products import Product as ProductModel
 from app.schemas.products import Product as ProductSchema, ProductCreate, ProductList
 from app.models import Category as CategoryModel
 from app.schemas.paginations import PaginationDep
-from app.auth import RoleChecker
+from app.core.security import RoleChecker
 from app.models.users import User as UserModel
 from app.dependecies import get_valid_category
 

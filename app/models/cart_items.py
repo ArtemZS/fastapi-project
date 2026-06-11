@@ -20,5 +20,7 @@ class CartItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Связь с таблицей Users один-ко-многим
     user: Mapped["User"] = relationship(back_populates="cart_items")
+    # Связь с таблицей Products один-ко-многим
     product: Mapped["Product"] = relationship(back_populates="cart_items")
