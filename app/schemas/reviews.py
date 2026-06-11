@@ -13,15 +13,15 @@ class ReviewCreate(BaseModel):
     
     @classmethod
     def as_form(
-            cls,
-            product_id: Annotated[int, Form(...)],
-            rating: Annotated[int, Form(...)],
-            comment: Annotated[Optional[str], Form()] = None
+        cls,
+        product_id: Annotated[int, Form(...)],
+        rating: Annotated[int, Form(...)],
+        comment: Annotated[Optional[str], Form()] = None
     ) -> "ReviewCreate":
         return cls(
-            product_id,
-            rating,
-            comment
+            product_id=product_id,
+            rating=rating,
+            comment=comment
         )
     
     

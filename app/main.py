@@ -24,6 +24,7 @@ app.include_router(products.router_v2)
 app.include_router(users.router)
 app.include_router(users.router_v2)
 app.include_router(reviews.router)
+app.include_router(reviews.router_v2)
 app.include_router(cart_items.router)
 app.include_router(orders.router)
 

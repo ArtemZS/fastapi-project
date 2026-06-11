@@ -11,11 +11,16 @@ from app.models.users import User as UserModel
 from app.models.products import Product as ProductModel
 from app.auth import RoleChecker
 from app.services import _recalculate_product_rating
-
+from app.services_for_routers.reviews import ReviewService
 
 router = APIRouter(
     prefix="/reviews",
     tags=["reviews"]
+)
+
+router_v2 = APIRouter(
+    prefix="/v2/reviews",
+    tags=["v2/reviews"]
 )
 
 
@@ -23,7 +28,7 @@ router = APIRouter(
 async def get_reviews(
     pagination: PaginationDep, 
     db: AsyncSession = Depends(get_async_db),
-) -> ReviewList:
+):
     """
     Получает список всех отзывов.
     """
@@ -41,7 +46,7 @@ async def get_reviews(
     return ReviewList(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.get("/products/{product_id}/reviews", response_model=ReviewList, status_code=status.HTTP_200_OK)
+@router.get("/products/{product_id}", response_model=ReviewList, status_code=status.HTTP_200_OK)
 async def get_reviews_by_product(
     product_id: int,
     pagination: PaginationDep,
@@ -153,3 +158,47 @@ async def delete_review(
     return review
     
     
+@router_v2.get("/", response_model=ReviewList, status_code=status.HTTP_200_OK)
+async def get_reviews(
+    pagination: PaginationDep, 
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Получает список всех отзывов.
+    """   
+    return await ReviewService.get_reviews(pagination, db)
+
+
+@router_v2.get("/products/{product_id}", response_model=ReviewList, status_code=status.HTTP_200_OK)
+async def get_reviews_by_product(
+    product_id: int,
+    pagination: PaginationDep,
+    rating: int | None = Query(None, ge=1, le=5, description="Фильтр по рейтингу от 1 до 5"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Получает отзывы по ID товара.
+    """
+    return await ReviewService.get_reviews_by_product(product_id, pagination, rating, db)
+
+@router_v2.post("/", response_model=ReviewSchema, status_code=status.HTTP_201_CREATED)
+async def create_review(
+    review: ReviewCreate = Depends(ReviewCreate.as_form),
+    current_user: UserModel = Depends(RoleChecker("buyer")),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Создает новый отзыв для товара.
+    """
+    return await ReviewService.create_review(review, current_user, db)
+
+@router_v2.delete("/{review_id}", response_model=ReviewSchema, status_code=status.HTTP_200_OK)
+async def delete_review(
+    review_id: int,
+    current_user: UserModel = Depends(RoleChecker(["buyer", "admin"])),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Удаляет отзыв по ID.
+    """
+    return await ReviewService.delete_review(review_id, current_user, db)
