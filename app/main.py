@@ -28,6 +28,7 @@ app.include_router(reviews.router_v2)
 app.include_router(cart_items.router)
 app.include_router(cart_items.router_v2)
 app.include_router(orders.router)
+app.include_router(orders.router_v2)
 
 
 app.mount("/media", StaticFiles(directory="media"), name="media")
