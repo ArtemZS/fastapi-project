@@ -5,7 +5,6 @@ from passlib.context import CryptContext
 import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Union
 
 from app.db_depends import get_async_db
 from app.models.users import User as UserModel
@@ -33,7 +32,7 @@ class CredentialsException(HTTPException):
 
 
 class RoleException(HTTPException):
-    def __init__(self, allowed_roles: Union[str, list[str]] = "buyer"):
+    def __init__(self, allowed_roles: str | list[str] = "buyer"):
         if isinstance(allowed_roles, str):
             roles_list = [allowed_roles]
         else:
@@ -114,7 +113,7 @@ class RoleChecker:
     Если нет, выбрасывает исключение с кодом 403.
     """
     
-    def __init__(self, allowed_roles: Union[str, list[str]]):
+    def __init__(self, allowed_roles: str | list[str] = "buyer"):
         # Можем принимать как одну роль "admin", так и список ["admin", "seller"]
         if isinstance(allowed_roles, str):
             self.allowed_roles = [allowed_roles]
