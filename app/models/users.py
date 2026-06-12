@@ -6,7 +6,7 @@ from app.models.orders import Order
 from app.models.products import Product
 from app.models.cart_items import CartItem
 from app.models.reviews import Review
-
+from app.schemas.users import UserRole
 
 class User(Base):
     __tablename__ = "users"
@@ -15,7 +15,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    role: Mapped[str] = mapped_column(String, default="buyer") #? "buyer" or "seller" or "admin"
+    role: Mapped[UserRole] = mapped_column(String, default=UserRole.buyer)
     
     # Связь с табллицей Products, если пользователь - продавец 
     products: Mapped[list["Product"]] = relationship(back_populates="seller")
