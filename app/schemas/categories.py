@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
+from app.schemas.paginations import PaginationGeneric
 
 class CategoryCreate(BaseModel):
     """
@@ -23,11 +24,14 @@ class Category(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     
-class CategoryList(BaseModel):
-    items: list[Category]
-    total: int = Field(ge=0)
-    page: int = Field(ge=1)
-    page_size: int = Field(ge=1)
-    
-    model_config = ConfigDict(from_attributes=True)
+class CategoryList(PaginationGeneric[Category]):
+    """
+    Модель для отображения списка категорий с поддержкой пагинации.
+
+    [НАСЛЕДУЕМЫЕ ПОЛЯ]:
+    - `items (list[Category])`: Элементы на текущей странице
+    - `total (int)`: Общее количество элементов.
+    - `page (int)`: Номер текущей страницы.
+    - `page_size (int)`: Количество элементов на странице.
+    """
         

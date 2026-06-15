@@ -2,16 +2,16 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from enum import Enum
 
 
-class UserRole(Enum):
-    buyer = "buyer"
-    seller = "seller"
-    admin = "admin"
+class UserRole(str, Enum):
+    BUYER = "buyer"
+    SELLER = "seller"
+    ADMIN = "admin"
 
 
 class UserCreate(BaseModel):
     email: EmailStr = Field(description="Email пользователя")
     password: str = Field(min_length=8, description="Пароль (минимум 8 символом)")
-    role: UserRole = Field(default=UserRole.buyer, description="Роль пользователя: buyer, seller или admin")
+    role: UserRole = Field(default=UserRole.BUYER, description="Роль пользователя: buyer, seller или admin")
 
 
 class User(BaseModel):

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Annotated, Optional
+from app.schemas.paginations import PaginationGeneric
 
 from fastapi import Form
 
@@ -23,8 +24,7 @@ class ReviewCreate(BaseModel):
             rating=rating,
             comment=comment
         )
-    
-    
+        
 class Review(BaseModel):
     """Модель для ответа с данными отзыва."""
     id: int
@@ -37,11 +37,13 @@ class Review(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
     
-class ReviewList(BaseModel):
-    """Список пагинации для отзывов."""
-    items: list[Review] = Field(description="Отзывы для текущей страницы")
-    total: int = Field(ge=0, description="Общее количество отзывов")
-    page: int = Field(ge=1, description="Номер текущей страницы")
-    page_size: int = Field(ge=1, description="Количество элементов на странице")
-    
-    model_config = ConfigDict(from_attributes=True)
+class ReviewList(PaginationGeneric[Review]):
+    """
+    Модель для отображения списка отзывов с поддержкой пагинации
+        
+    [НАСЛЕДУЕМЫЕ ПОЛЯ]:
+    - `items (list[Review])`: Элементы на текущей странице
+    - `total (int)`: Общее количество элементов.
+    - `page (int)`: Номер текущей страницы.
+    - `page_size (int)`: Количество элементов на странице.
+    """

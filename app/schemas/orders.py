@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 
 from app.schemas.products import Product
+from app.schemas.paginations import PaginationGeneric
 
 
 class OrderItem(BaseModel):
@@ -30,11 +31,13 @@ class Order(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     
-class OrderList(BaseModel):
-    """Модель для отображения списка заказов с поддержкой пагинации."""
-    items: list[Order] = Field(description="Заказы на текущей странице")
-    total: int = Field(ge=0, description="Общее количество заказов")
-    page: int = Field(ge=1, description="Номер текущей страницы")
-    page_size: int = Field(ge=1, description="Количество элементов на странице")
-    
-    model_config = ConfigDict(from_attributes=True)
+class OrderList(PaginationGeneric[Order]):
+    """
+    Модель для отображения списка заказов с поддержкой пагинации.
+
+    [НАСЛЕДУЕМЫЕ ПОЛЯ]:
+    - `items (list[Order])`: Элементы на текущей странице
+    - `total (int)`: Общее количество элементов.
+    - `page (int)`: Номер текущей страницы.
+    - `page_size (int)`: Количество элементов на странице.
+    """

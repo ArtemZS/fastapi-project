@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from decimal import Decimal
 from typing import Annotated, Optional
 from fastapi import Form
-
+from app.schemas.paginations import PaginationGeneric
 
 class ProductCreate(BaseModel):
     """
@@ -54,13 +54,13 @@ class Product(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
 
-class ProductList(BaseModel):
+class ProductList(PaginationGeneric[Product]):
     """
-    Список пагинации для товаров.
-    """
-    items: list[Product] = Field(description="Товары для текущей страницы")
-    total: int = Field(ge=0, description="Общее количество товаров")
-    page: int = Field(ge=1, description="Номер текущей страницы")
-    page_size: int = Field(ge=1, description="Количество элементов на странице")
+    Модель для отображения списка продуктов с поддержкой пагинации
     
-    model_config = ConfigDict(from_attributes=True)
+    [НАСЛЕДУЕМЫЕ ПОЛЯ]:
+    - `items (list[Product])`: Элементы на текущей странице
+    - `total (int)`: Общее количество элементов.
+    - `page (int)`: Номер текущей страницы.
+    - `page_size (int)`: Количество элементов на странице.
+    """
