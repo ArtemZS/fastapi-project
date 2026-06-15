@@ -15,7 +15,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    role: Mapped[UserRole] = mapped_column(String, default=UserRole.buyer)
+    role: Mapped[UserRole] = mapped_column(String, default=UserRole.BUYER)
     
     # Связь с табллицей Products, если пользователь - продавец 
     products: Mapped[list["Product"]] = relationship(back_populates="seller")

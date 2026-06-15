@@ -6,7 +6,6 @@ from app.models.categories import Category as CategoryModel
 
 class GetValidCategory:
     def __init__(self, exc_code: int = 404, exc_detail: str = "Category not found or inactive"):
-        # Эти параметры теперь хранятся внутри класса и НЕ попадают в Swagger как query!
         self.exc_code = exc_code
         self.exc_detail = exc_detail
 
