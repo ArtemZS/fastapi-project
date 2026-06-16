@@ -1,5 +1,3 @@
-import os
-
 from app.models.products import Product as ProductModel
 from app.schemas.products import ProductList, ProductCreate
 from app.models import Category as CategoryModel
@@ -24,7 +22,10 @@ async def save_product_image(file: UploadFile) -> str:
     Сохраняет изображение товара и возвращает относительный URL.
     """
     if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only JPG, PNG or WebP images are allowed")
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
+            f"Unsupported file type: '{file.content_type}'. Only {', '.join(ALLOWED_IMAGE_TYPES)} are allowed."
+        )
     
     extension = Path(file.filename or "").suffix.lower() or ".jpg"
     file_name = f"{uuid.uuid4()}{extension}"
