@@ -25,7 +25,7 @@ async def save_product_image(file: UploadFile) -> str:
 
     content = await file.read()
     if len(content) > MAX_IMAGE_SIZE:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image is too large")
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Image is too large")
 
     extension = Path(file.filename or "").suffix.lower() or ".jpg"
     file_name = f"{uuid.uuid4()}{extension}"
