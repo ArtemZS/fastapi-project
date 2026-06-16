@@ -1,3 +1,5 @@
+import os
+
 from app.models.products import Product as ProductModel
 from app.schemas.products import ProductList, ProductCreate
 from app.models import Category as CategoryModel
@@ -8,13 +10,14 @@ from pathlib import Path
 from fastapi import HTTPException, status, UploadFile
 import uuid
 from decimal import Decimal
+import aiofiles
 from app.dependecies import get_valid_category_or_400 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media" / "products"
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2 097 152 байт
+MAX_IMAGE_SIZE = 4 * 1024 * 1024  # 4,194,304 байт
 
 async def save_product_image(file: UploadFile) -> str:
     """
@@ -22,15 +25,31 @@ async def save_product_image(file: UploadFile) -> str:
     """
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only JPG, PNG or WebP images are allowed")
-
-    content = await file.read()
-    if len(content) > MAX_IMAGE_SIZE:
-        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Image is too large")
-
+    
     extension = Path(file.filename or "").suffix.lower() or ".jpg"
     file_name = f"{uuid.uuid4()}{extension}"
     file_path = MEDIA_ROOT / file_name
-    file_path.write_bytes(content)
+    
+    total_bytes = 0
+    chunk_size = 1024 * 1024
+    
+    try:
+        async with aiofiles.open(file_path, "wb") as out_file:
+            while chunk := await file.read(chunk_size):
+                total_bytes += len(chunk)
+                
+                if total_bytes > MAX_IMAGE_SIZE:
+                    raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Image is too large")
+                await out_file.write(chunk)
+    except HTTPException:
+        # Удаление частично сохраненного файла при ошибке через Pathlib
+        if file_path.exists():
+            file_path.unlink()
+        raise
+    except Exception:
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to save image")                
 
     return f"/media/products/{file_name}"
 
