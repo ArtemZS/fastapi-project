@@ -11,7 +11,7 @@ from app.schemas.cart_items import (
     CartItemCreate,
     CartItemUpdate
 )
-from app.services import _ensure_product_available, _get_cart_item
+from app.utils import _ensure_product_available, _get_cart_item
 
 
 class CarItemService:

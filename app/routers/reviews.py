@@ -6,7 +6,7 @@ from app.schemas.reviews import Review as ReviewSchema, ReviewCreate, ReviewList
 from app.schemas.paginations import PaginationDep
 from app.models.users import User as UserModel
 from app.core.security import RoleChecker
-from app.services_for_routers.reviews import ReviewService
+from app.services.reviews import ReviewService
 
 router = APIRouter(
     prefix="/reviews",

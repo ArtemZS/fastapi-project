@@ -8,7 +8,7 @@ from app.schemas.reviews import ReviewCreate, ReviewList
 from app.schemas.paginations import PaginationDep
 from app.models.users import User as UserModel
 from app.models.products import Product as ProductModel
-from app.services import _recalculate_product_rating
+from app.utils import _recalculate_product_rating
 
 class ReviewService:
     @staticmethod

@@ -7,7 +7,7 @@ from app.models.users import User as UserModel
 from app.schemas.orders import Order as OrderSchema, OrderList 
 from app.schemas.paginations import PaginationDep
 
-from app.services_for_routers.orders import OrderService
+from app.services.orders import OrderService
 
 router = APIRouter(
     prefix="/orders",

@@ -15,19 +15,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media" / "products"
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
 MAX_IMAGE_SIZE = 4 * 1024 * 1024  # 4,194,304 байт
 
 async def save_product_image(file: UploadFile) -> str:
     """
     Сохраняет изображение товара и возвращает относительный URL.
     """
+    extension = Path(file.filename or "").suffix.lower() or ".jpg"
+    if extension not in ALLOWED_FILE_EXTENSIONS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Unsupported file extension: '{extension}'. Only {', '.join(ALLOWED_FILE_EXTENSIONS)} are allowed."
+        )
+    
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
             f"Unsupported file type: '{file.content_type}'. Only {', '.join(ALLOWED_IMAGE_TYPES)} are allowed."
         )
     
-    extension = Path(file.filename or "").suffix.lower() or ".jpg"
     file_name = f"{uuid.uuid4()}{extension}"
     file_path = MEDIA_ROOT / file_name
     

@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.db_depends import get_async_db
 from app.schemas.users import User as UserSchema, UserCreate
 from app.schemas.auth import TokenResponse, RefreshTokenRequest, RefreshTokenResponse
-from app.services_for_routers.auth import AuthService
-from app.services_for_routers.users import UserService
+from app.services.auth import AuthService
+from app.services.users import UserService
 
 router = APIRouter(
     prefix="/users",

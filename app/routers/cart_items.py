@@ -11,7 +11,7 @@ from app.schemas.cart_items import (
     CartItemUpdate
 )
 
-from app.services_for_routers.cart_items import CarItemService
+from app.services.cart_items import CarItemService
 
 router = APIRouter(
     prefix="/cart",

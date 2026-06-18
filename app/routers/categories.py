@@ -13,7 +13,7 @@ from app.dependecies import get_valid_category
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services_for_routers.categories import CategoryService 
+from app.services.categories import CategoryService 
 
 router = APIRouter(
     prefix="/categories",

@@ -11,7 +11,7 @@ from app.dependecies import get_valid_category
 from app.db_depends import  get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services_for_routers.products import ProductService
+from app.services.products import ProductService
 
 router = APIRouter(
     prefix="/products",

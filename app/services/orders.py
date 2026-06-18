@@ -11,7 +11,7 @@ from app.models.users import User as UserModel
 from app.schemas.orders import OrderList 
 from app.schemas.paginations import PaginationDep
 
-from app.services import _load_order_with_items
+from app.utils import _load_order_with_items
 
 class OrderService:
     @staticmethod
