@@ -1,16 +1,40 @@
-from app.models.categories import Category as CategoryModel
-from app.schemas.categories import CategoryList, CategoryCreate
+from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
+
+from app.models.categories import Category as CategoryModel
+from app.schemas.categories import CategoryList, CategoryCreate
+
 
 class CategoryService:
+    @staticmethod
+    async def get_category_by_id(
+        category_id: int, 
+        db: AsyncSession
+    ) -> CategoryModel:
+        """
+        Внутренний или внешний метод для получения валидной категории.
+        Если не найдена — сразу генерирует HTTPException.
+        """
+        category = await db.scalar(
+            select(CategoryModel).where(
+                CategoryModel.id == category_id,
+                CategoryModel.is_active == True
+            )
+        )
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Category not found"
+            )
+        return category
+
     @staticmethod
     async def get_all_categories(
         pagination,
         db: AsyncSession
-    ):
+    ) -> CategoryList:
         """
         Возвращает список всех активных категорий с пагинацией. 
         """
@@ -37,35 +61,16 @@ class CategoryService:
         )
         
     @staticmethod
-    async def get_category(
-        category: CategoryModel
-    ):
-        """
-        
-        """
-        # Если get_valid_category отработал в роуте, объект уже валиден
-        return category  
-        
-    @staticmethod
     async def create_category(
         category: CategoryCreate,
         db: AsyncSession
-    ):
+    ) -> CategoryModel:
         """
         Создаёт новую категорию с проверкой родительской категории.
         """
         if category.parent_id is not None:
-            parent = await db.scalar(
-                select(CategoryModel).where(
-                    CategoryModel.id == category.parent_id,
-                    CategoryModel.is_active == True
-                )
-            )
-            if parent is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, 
-                    detail="Parent category not found"
-                )
+            # Используем наш метод для проверки существования родителя
+            await CategoryService.get_category_by_id(category.parent_id, db)
 
         db_category = CategoryModel(**category.model_dump())
         db.add(db_category)
@@ -75,13 +80,16 @@ class CategoryService:
     
     @staticmethod
     async def update_category(
+        category_id: int,
         category: CategoryCreate,
-        db_category: CategoryModel,
         db: AsyncSession
-    ):
+    ) -> CategoryModel:
         """
         Обновляет категорию по её ID.
         """
+        # Сначала получаем текущую категорию из БД
+        db_category = await CategoryService.get_category_by_id(category_id, db)
+
         if category.parent_id is not None:
             # Защита от зацикливания: нельзя назначить родителем саму себя
             if category.parent_id == db_category.id:
@@ -89,25 +97,13 @@ class CategoryService:
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="Category cannot be its own parent"
                 )
-                
-            parent = await db.scalar(
-                select(CategoryModel).where(
-                    CategoryModel.id == category.parent_id,
-                    CategoryModel.is_active == True
-                )
-            )
-            if not parent:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail="Parent category not found"
-                )
+            # Проверяем, существует ли родитель
+            await CategoryService.get_category_by_id(category.parent_id, db)
 
-        # ИСПРАВЛЕНО: Добавлен .items() для словаря
         update_data = category.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_category, key, value)
         
-        # ИСПРАВЛЕНО: Сначала коммит, потом рефреш
         await db.commit()
         await db.refresh(db_category)
         return db_category
@@ -116,10 +112,11 @@ class CategoryService:
     async def delete_category(
         category_id: int,
         db: AsyncSession
-    ):
+    ) -> CategoryModel:
         """
         Выполняет мягкое каскадное удаление категории (is_active = False).
         """
+        # Здесь мы запрашиваем с загрузкой children, поэтому пишем кастомный селект
         db_category = await db.scalar(
             select(CategoryModel)
             .options(selectinload(CategoryModel.children))

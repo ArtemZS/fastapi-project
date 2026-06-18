@@ -1,22 +1,25 @@
-from app.models.products import Product as ProductModel
-from app.schemas.products import ProductList, ProductCreate
-from app.models import Category as CategoryModel
-from app.models import User as UserModel
-from sqlalchemy import select, func, desc
-from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
-from fastapi import HTTPException, status, UploadFile
 import uuid
 from decimal import Decimal
+from fastapi import HTTPException, status, UploadFile
+from sqlalchemy import select, func, desc
+from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
-from app.core.dependecies import get_valid_category_or_400 
+
+from app.models.products import Product as ProductModel
+from app.models import Category as CategoryModel
+from app.models import User as UserModel
+from app.schemas.products import ProductList, ProductCreate
+from app.services.categories import CategoryService  # Импортируем соседний сервис
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media" / "products"
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
-MAX_IMAGE_SIZE = 4 * 1024 * 1024  # 4,194,304 байт
+MAX_IMAGE_SIZE = 4 * 1024 * 1024
+
 
 async def save_product_image(file: UploadFile) -> str:
     """
@@ -45,12 +48,10 @@ async def save_product_image(file: UploadFile) -> str:
         async with aiofiles.open(file_path, "wb") as out_file:
             while chunk := await file.read(chunk_size):
                 total_bytes += len(chunk)
-                
                 if total_bytes > MAX_IMAGE_SIZE:
                     raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Image is too large")
                 await out_file.write(chunk)
     except HTTPException:
-        # Удаление частично сохраненного файла при ошибке через Pathlib
         if file_path.exists():
             file_path.unlink()
         raise
@@ -75,6 +76,7 @@ def remove_product_image(url: str | None) -> None:
 
 
 class ProductService:
+
     @staticmethod
     async def get_all_products(
         pagination,
@@ -85,27 +87,20 @@ class ProductService:
         in_stock: bool | None,
         seller_id: int | None,
         db: AsyncSession
-    ):
+    ) -> ProductList:
         """
         Возвращает список всех товаров с поддержкой фильтров.
         """
-        # Проверка логики min_price <= max_price
         if min_price is not None and max_price is not None and min_price > max_price:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="min_price не может быть больше max_price"
             )
-        # Формируем список фильтров
+
         filters = [ProductModel.is_active == True]
         if category_id is not None:
             filters.append(ProductModel.category_id == category_id)
-        """        
-        if search is not None:
-            search_value = search.strip()
-            if search_value:
-                # Регистронезависимый поиск
-                filters.append(ProductModel.name.ilike(f"%{search_value}%"))
-        """
+        
         if min_price is not None:
             filters.append(ProductModel.price >= min_price)
             
@@ -131,7 +126,7 @@ class ProductService:
 
         page = pagination.page
         page_size = pagination.page_size
-        # Основной запрос (если есть поиск — добавим ранг в выборку и сортировку)
+
         if rank_col is not None:
             products_stmt = (
                 select(ProductModel, rank_col)
@@ -140,10 +135,8 @@ class ProductService:
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
-            result = await db.execute(products_stmt)  #? Выполняем запрос, который возвращает кортежи (ProductModel, rank)
-            items = [row[0] for row in result.all()]    # сами объекты
-            # при желании можно вернуть ранг в ответе
-            # ranks = [row.rank for row in rows]
+            result = await db.execute(products_stmt)
+            items = [row[0] for row in result.all()]
         else:
             products_stmt = (
                 select(ProductModel)
@@ -154,12 +147,7 @@ class ProductService:
             )
             items = (await db.scalars(products_stmt)).all()
 
-        return ProductList(
-            items=items,
-            total=total or 0,
-            page=page,
-            page_size=page_size
-        )
+        return ProductList(items=items, total=total, page=page, page_size=page_size)
         
     @staticmethod
     async def create_product(
@@ -167,15 +155,24 @@ class ProductService:
         image: UploadFile | None,
         db: AsyncSession,
         current_user: UserModel
-    ):
+    ) -> ProductModel:
         """
         Создаёт новый товар, привязанный к текущему продавцу (только для 'seller').
         """
-        # Проверяем, существует ли активная категория
-        await get_valid_category_or_400(product.category_id, db)
+        try:
+            # Используем логику проверки из CategoryService
+            await CategoryService.get_category_by_id(product.category_id, db)
+        except HTTPException as exc:
+            # Меняем 404 на 400 Bad Request, так как это ошибка входных данных формы
+            if exc.status_code == status.HTTP_404_NOT_FOUND:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Category with id {product.category_id} does not exist or is inactive"
+                )
+            raise exc
         
         image_url = await save_product_image(image) if image else None
-        # Создаём товар
+
         db_product = ProductModel(
             **product.model_dump(),
             seller_id=current_user.id,
@@ -186,17 +183,19 @@ class ProductService:
         await db.refresh(db_product)
         return db_product
     
-    
     @staticmethod
     async def get_products_by_category(
         pagination,
-        category: CategoryModel,
+        category_id: int,
         db: AsyncSession
-    ):
+    ) -> ProductList:
         """
         Возвращает список товаров в указанной категории по её ID.
         """
-        filters = [ProductModel.category_id == category.id, ProductModel.is_active == True]
+        # Проверяем существование самой категории. Если её нет — сгенерируется 404
+        await CategoryService.get_category_by_id(category_id, db)
+
+        filters = [ProductModel.category_id == category_id, ProductModel.is_active == True]
         total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
         total = await db.scalar(total_stmt) or 0
         
@@ -214,19 +213,18 @@ class ProductService:
     async def get_product(
         product_id: int,
         db: AsyncSession
-    ):
+    ) -> ProductModel:
         """
         Возвращает детальную информацию о товаре по его ID.
         """
-        # Проверяем, существует ли активный товар
         product = await db.scalar(
             select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
         )
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
 
-        # Проверяем, существует ли активная категория
-        await get_valid_category_or_400(product.category_id, db)
+        # Дополнительно проверяем, активна ли категория, к которой привязан товар
+        await CategoryService.get_category_by_id(product.category_id, db)
 
         return product
     
@@ -237,33 +235,40 @@ class ProductService:
         image: UploadFile | None,
         db: AsyncSession,
         current_user: UserModel
-    ):
+    ) -> ProductModel:
         """
         Обновляет товар по его ID.
         """
-        # Проверяем, существует ли товар
         db_product = await db.scalar(
             select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
         )
         if not db_product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Product not found or inactive")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
+            
         if db_product.seller_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="You can only update your own products")
-        # Проверяем, существует ли активная категория
-        await get_valid_category_or_400(product.category_id, db)
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only update your own products")
+            
+        try:
+            # Валидация новой категории при обновлении товара
+            await CategoryService.get_category_by_id(product.category_id, db)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_404_NOT_FOUND:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Category with id {product.category_id} does not exist or is inactive"
+                )
+            raise exc
 
-        # Обновляем товар
         update_data = product.model_dump()
         for key, value in update_data.items():
             setattr(db_product, key, value)
         
         if image:
-            remove_product_image(db_product.image_url)  #? Удаляем старое изображение, если было
-            db_product.image_url = await save_product_image(image)  #? Сохраняем новое изображение и обновляем URL
+            remove_product_image(db_product.image_url)
+            db_product.image_url = await save_product_image(image)
+            
         await db.commit()
-        await db.refresh(db_product) #? Для консистентности данных
+        await db.refresh(db_product)
         return db_product
     
     @staticmethod
@@ -271,25 +276,21 @@ class ProductService:
         product_id: int,
         db: AsyncSession,
         current_user: UserModel
-    ):
+    ) -> ProductModel:
         """
-        Выполняет мягкое удаление товара, если он принадлежит текущему продавцу (только для 'seller').
+        Выполняет мягкое удаление товара, если он принадлежит текущему продавцу.
         """
-        # Проверяем, существует ли активный товар
         product = await db.scalar(
-            select(ProductModel).where(ProductModel.id == product_id, 
-                                    ProductModel.is_active == True)
+            select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
         )
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Product not found or inactive")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
+            
         if product.seller_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="You can only delete your own products")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own products")
 
-        # Изменяем объект установив is_active=False и сохраняем
         product.is_active = False
-        remove_product_image(product.image_url)  #? Удаляем изображение товара при удалении
+        remove_product_image(product.image_url)
         
         await db.commit()
         return product

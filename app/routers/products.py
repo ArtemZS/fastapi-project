@@ -1,16 +1,12 @@
 from fastapi import APIRouter, Depends, status, Query, UploadFile, File
 from decimal import Decimal
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.products import Product as ProductSchema, ProductCreate, ProductList
-from app.models import Category as CategoryModel
 from app.schemas.paginations import PaginationDep
 from app.core.security import RoleChecker
 from app.models.users import User as UserModel
-from app.core.dependecies import get_valid_category
-
-from app.core.db_depends import  get_async_db
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.core.db_depends import get_async_db
 from app.services.products import ProductService
 
 router = APIRouter(
@@ -60,17 +56,21 @@ async def create_product(
 
 @router.get("/category/{category_id}", response_model=ProductList, status_code=status.HTTP_200_OK)
 async def get_products_by_category(
+    category_id: int,
     pagination: PaginationDep,
-    category: CategoryModel = Depends(get_valid_category),
-    db: AsyncSession = Depends(get_async_db)):
+    db: AsyncSession = Depends(get_async_db)
+):
     """
     Возвращает список товаров в указанной категории по её ID.
     """
-    return await ProductService.get_products_by_category(pagination, category, db)
+    return await ProductService.get_products_by_category(pagination, category_id, db)
 
 
 @router.get("/{product_id}", response_model=ProductSchema, status_code=status.HTTP_200_OK)
-async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db)):
+async def get_product(
+    product_id: int, 
+    db: AsyncSession = Depends(get_async_db)
+):
     """
     Возвращает детальную информацию о товаре по его ID.
     """

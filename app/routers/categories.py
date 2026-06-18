@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db_depends import get_async_db
-from app.models.categories import Category as CategoryModel
 from app.schemas.categories import (
     Category as CategorySchema,
     CategoryCreate,
@@ -9,10 +9,6 @@ from app.schemas.categories import (
 ) 
 from app.schemas.paginations import PaginationDep
 from app.core.security import RoleChecker
-from app.core.dependecies import get_valid_category
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.services.categories import CategoryService 
 
 router = APIRouter(
@@ -34,12 +30,13 @@ async def get_all_categories(
 
 @router.get("/{category_id}", response_model=CategorySchema, status_code=status.HTTP_200_OK)
 async def get_category(
-    category: CategoryModel = Depends(get_valid_category)
+    category_id: int,
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Возвращает активную категорию по ее ID. 
     """
-    return await CategoryService.get_category(category)
+    return await CategoryService.get_category_by_id(category_id, db)
 
 
 @router.post("/",
@@ -63,14 +60,14 @@ async def create_category(
     status_code=status.HTTP_200_OK
 )
 async def update_category(
+    category_id: int,
     category: CategoryCreate,
-    db_category: CategoryModel = Depends(get_valid_category),
     db: AsyncSession = Depends(get_async_db)
 ):
     """
     Обновляет категорию по её ID. Только администраторы могут обновлять категории.
     """
-    return await CategoryService.update_category(category, db_category, db)
+    return await CategoryService.update_category(category_id, category, db)
 
 
 @router.delete("/{category_id}",
