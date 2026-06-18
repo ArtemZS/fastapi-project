@@ -6,9 +6,9 @@ from app.models import Category as CategoryModel
 from app.schemas.paginations import PaginationDep
 from app.core.security import RoleChecker
 from app.models.users import User as UserModel
-from app.dependecies import get_valid_category
+from app.core.dependecies import get_valid_category
 
-from app.db_depends import  get_async_db
+from app.core.db_depends import  get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.products import ProductService

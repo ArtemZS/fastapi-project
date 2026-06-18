@@ -9,7 +9,7 @@ from fastapi import HTTPException, status, UploadFile
 import uuid
 from decimal import Decimal
 import aiofiles
-from app.dependecies import get_valid_category_or_400 
+from app.core.dependecies import get_valid_category_or_400 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media" / "products"

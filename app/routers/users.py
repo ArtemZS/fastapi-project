@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.db_depends import get_async_db
+from app.core.db_depends import get_async_db
 from app.schemas.users import User as UserSchema, UserCreate
 from app.schemas.auth import TokenResponse, RefreshTokenRequest, RefreshTokenResponse
 from app.services.auth import AuthService

@@ -2,7 +2,7 @@ from sqlalchemy import Text, Boolean, ForeignKey, DateTime, CheckConstraint, fun
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
-from app.database import Base
+from app.core.database import Base
 
 
 class Review(Base):

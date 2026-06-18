@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_depends import get_async_db
+from app.core.db_depends import get_async_db
 from app.schemas.reviews import Review as ReviewSchema, ReviewCreate, ReviewList
 from app.schemas.paginations import PaginationDep
 from app.models.users import User as UserModel

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user
-from app.db_depends import get_async_db
+from app.core.db_depends import get_async_db
 from app.models.users import User as UserModel
 from app.schemas.cart_items import (
     Cart as CartSchema,

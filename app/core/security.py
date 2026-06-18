@@ -6,7 +6,7 @@ import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_depends import get_async_db
+from app.core.db_depends import get_async_db
 from app.models.users import User as UserModel
 from app.core.config import settings
 

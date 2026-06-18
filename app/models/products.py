@@ -3,7 +3,7 @@ from sqlalchemy import String, Boolean, Integer, Numeric, ForeignKey, Computed, 
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.core.database import Base
 
 
 class Product(Base):

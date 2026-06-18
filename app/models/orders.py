@@ -3,7 +3,7 @@ from sqlalchemy import String, ForeignKey, func, Numeric, DateTime
 from decimal import Decimal
 from datetime import datetime
 
-from app.database import Base
+from app.core.database import Base
 
 
 class Order(Base):

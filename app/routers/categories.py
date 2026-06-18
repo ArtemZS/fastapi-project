@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from app.db_depends import get_async_db
+from app.core.db_depends import get_async_db
 from app.models.categories import Category as CategoryModel
 from app.schemas.categories import (
     Category as CategorySchema,
@@ -9,7 +9,7 @@ from app.schemas.categories import (
 ) 
 from app.schemas.paginations import PaginationDep
 from app.core.security import RoleChecker
-from app.dependecies import get_valid_category
+from app.core.dependecies import get_valid_category
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

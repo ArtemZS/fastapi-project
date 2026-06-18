@@ -1,7 +1,7 @@
 from sqlalchemy import String, Boolean
 from sqlalchemy.orm import  Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.core.database import Base
 from app.models.orders import Order
 from app.models.products import Product
 from app.models.cart_items import CartItem
